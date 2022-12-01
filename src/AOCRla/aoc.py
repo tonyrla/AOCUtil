@@ -96,7 +96,7 @@ def generate():
     if not TEMPLATE.exists():
         print(f"Template file does not exist {TEMPLATE}, creating a new one")
         TEMPLATE.write_text(f"""import sys
-from utils.aoc import AOC
+from AOCRla import AOC
 
 class puzzle(AOC):
     def __init__(self, open_browser: bool = False):
