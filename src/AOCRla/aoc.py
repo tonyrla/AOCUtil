@@ -25,17 +25,24 @@ class AOC():
             raise FileNotFoundError(f'{self._COOKIE_FILE.__str__()} does not exist, login to www.adventofcode.com and save your session cookie to this file')
         self._session = requests.Session()
         self._session.cookies.set("session", self._COOKIE_FILE.read_text().strip(), domain="adventofcode.com")
-        # To prevent the ban. Going to make it in to a package later.
+        
+        # To prevent the ban.
         self._session.headers.update({'User-Agent': 'https://github.com/tonyrla/AOCUtil'})
         if open_browser:
             import webbrowser
             webbrowser.open(f'https://adventofcode.com/{self.YEAR}/day/{self.DAY}')
 
     def _get_day_from_file(self, file: Path):
-        return int(re.sub('[^0-9]', '', file.stem))
+        try:
+            return int(re.sub('[^0-9]', '', file.stem))
+        except ValueError:
+            raise SystemExit(f'Could not determine day from file {file.stem}')
 
     def _get_year_from_path(self, file: Path):
-        return int(re.search(r'(20\d{2})', file.__str__()).group(1))
+        try:
+            return int(re.search(r'(20\d{2})', file.__str__()).group(1))
+        except ValueError:
+            raise SystemExit(f'Could not determine year from path: {file}')
 
     def get_input_data(self):
         if not self.CACHE_DIR.exists():
