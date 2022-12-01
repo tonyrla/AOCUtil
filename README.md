@@ -12,7 +12,7 @@ Input downloader for Advent of Code
 
 To generate the puzzle .py files for every day:
 ```bash
-python ./utils.aoc.py
+python -m AOCRla.aoc
 ```
 
 To run a specific day's puzzle:
@@ -22,5 +22,5 @@ python ./dayXX.py
 
 To open a web browser with the correct puzzle selected, add anything after the python file:
 ```bash
-python ./utils.aoc.py asdf
+python ./day01.py  asdf
 ```
