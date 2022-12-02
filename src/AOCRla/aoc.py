@@ -1,18 +1,27 @@
 import hashlib
 import inspect
 import json
+import logging
+import os
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import requests
+from loguru import logger
 
 class AOC():
     def __del__(self):
-        self._ANSWERS_FILE.write_text(json.dumps(self._answers_obj, indent=4))
+        self._ANSWERS_FILE.write_text(json.dumps(self._answers_obj, indent=4)+"\n")
 
     def __init__(self, open_browser: bool = False):
+        # remove rootlogger
+        logger.remove()
+        logger.add(sys.stdout, level=os.environ.get('AOC_LOG_LEVEL', 'INFO'))
+        self.log = logger
+
         frame = inspect.stack()[1]
         modulef = inspect.getmodule(frame[0]).__file__
         if not isinstance(modulef, str):
@@ -64,9 +73,10 @@ class AOC():
         if not input_file.exists():
             self._download_input_data(input_file)
             self._set_hash(input_file)
+            self.log.info(f'Input data for AOC {self.YEAR} day {self.DAY} saved to {input_file}')
             return input_file.read_text()
         else:
-            print(f'Using cached input data for {self.YEAR} day {self.DAY}')
+            self.log.warning(f'Using cached input data for {self.YEAR} day {self.DAY}')
             self._set_hash(input_file)
             return input_file.read_text()
 
@@ -78,14 +88,17 @@ class AOC():
         r.raise_for_status()
         with open(input_file, 'wb') as f:
             f.write(r.content)
-        print(f'Downloaded input data for AOC {self.YEAR} day {self.DAY}')
+        self.log.info(f'Downloaded input data for AOC {self.YEAR} day {self.DAY}')
 
     def post_answer(self, part: int, answer: Any) -> bool:
-        print(f'Posting answer for part {part}: {answer}')
+        self.log.info(f'Posting answer for part {part}: {answer}')
         
         if f'{self._input_hash}_{part}' in self._answers_obj:
-            print('Answer already posted')
-            return True
+            result = self._answers_obj[f'{self._input_hash}_{part}']
+            t = type(result)
+            result = t(answer) == result
+            self.log.warning('Answer already posted, checking against cache :' + (' Correct!' if result else ' Incorrect!'))
+            return result
 
         if not self._COOKIE_FILE.exists():
             raise FileNotFoundError(f'{self._COOKIE_FILE.__str__()} does not exist, login to www.adventofcode.com and save your session cookie to this file')
@@ -94,11 +107,11 @@ class AOC():
         r.raise_for_status()
 
         if self._parse_response(r.text):
-            print(f'Posted the correct answer for AOC {self.YEAR} day {self.DAY} part {part}')
+            self.log.info(f'Posted the correct answer for AOC {self.YEAR} day {self.DAY} part {part}')
             self._answers_obj[f'{self._input_hash}_{part}'] = str(answer)
             return True
         else:
-            print(f'Posted the wrong answer for AOC {self.YEAR} day {self.DAY} part {part}, please wait a while and try again.')
+            self.log.info(f'Posted the wrong answer for AOC {self.YEAR} day {self.DAY} part {part}, please wait a while and try again.')
             return False
 
     def _parse_response(self, response: str) -> bool:
@@ -113,7 +126,7 @@ class AOC():
         elif "That's the right answer" in response:
             return True
         elif "Did you already complete it?" in response:
-            print('You already completed this puzzle.')
+            self.log.info('You already completed this puzzle.')
             return True
 
         raise Exception(f'Unknown response: {response}')
@@ -122,8 +135,8 @@ def generate():
     TEMPLATE = Path("./TEMPLATE_DAY.py").resolve()
     if not TEMPLATE.exists():
         print(f"Template file does not exist {TEMPLATE}, creating a new one")
-        TEMPLATE.write_text(f"""import sys
-from AOCRla import AOC
+        TEMPLATE.write_text("""import sys
+from AOCRla.aoc import AOC
 
 class puzzle(AOC):
     def __init__(self, open_browser: bool = False):
@@ -137,7 +150,7 @@ class puzzle(AOC):
         pass
 
     def part1_oneliner(self) -> int|None:
-        # Path('./inputs/<year>_<day>.txt').read_text().splitlines()
+        # [ line for line in open(f'./inputs/{self.YEAR}_{self.DAY}.txt').read().strip().split('\\n')]
         pass
 
     def part2_oneliner(self) -> int|None:
