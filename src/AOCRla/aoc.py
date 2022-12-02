@@ -1,4 +1,6 @@
+import hashlib
 import inspect
+import json
 import re
 from datetime import datetime
 from pathlib import Path
@@ -7,6 +9,9 @@ from typing import Any
 import requests
 
 class AOC():
+    def __del__(self):
+        self._ANSWERS_FILE.write_text(json.dumps(self._answers_obj, indent=4))
+
     def __init__(self, open_browser: bool = False):
         frame = inspect.stack()[1]
         modulef = inspect.getmodule(frame[0]).__file__
@@ -17,6 +22,13 @@ class AOC():
         self.YEAR = self._get_year_from_path(filep)
         self.CACHE_DIR = Path(filep.parent / 'inputs')
         self._COOKIE_FILE = Path(filep.parent / 'data' / '.secret_session_cookie')
+        self._ANSWERS_FILE = Path(filep.parent / 'data' / 'answers.json')
+
+        if not self._ANSWERS_FILE.exists():
+            self._ANSWERS_FILE.write_text('{}')
+
+        self._answers_obj = json.loads(self._ANSWERS_FILE.read_text())
+
         self._cur_year = datetime.now().year
         if self.DAY < 1 or self.DAY > 25 or self.YEAR < 2015 or self.YEAR > self._cur_year:
             raise SystemExit(f'{self.YEAR} / {self.DAY} is not a valid Advent of Code date!')
@@ -51,20 +63,30 @@ class AOC():
         input_file = self.CACHE_DIR / f'{self.YEAR}_{self.DAY:02d}.txt'
         if not input_file.exists():
             self._download_input_data(input_file)
+            self._set_hash(input_file)
+            return input_file.read_text()
         else:
             print(f'Using cached input data for {self.YEAR} day {self.DAY}')
+            self._set_hash(input_file)
             return input_file.read_text()
 
-    def _download_input_data(self, input_file: Path):
+    def _set_hash(self, input_file: Path) -> str:
+        self._input_hash = hashlib.md5(input_file.read_bytes()).hexdigest()
 
+    def _download_input_data(self, input_file: Path):
         r = self._session.get(f'https://adventofcode.com/{self.YEAR}/day/{self.DAY}/input')
         r.raise_for_status()
         with open(input_file, 'wb') as f:
             f.write(r.content)
         print(f'Downloaded input data for AOC {self.YEAR} day {self.DAY}')
 
-    def post_answer(self, part: int, answer: Any):
+    def post_answer(self, part: int, answer: Any) -> bool:
         print(f'Posting answer for part {part}: {answer}')
+        
+        if f'{self._input_hash}_{part}' in self._answers_obj:
+            print('Answer already posted')
+            return True
+
         if not self._COOKIE_FILE.exists():
             raise FileNotFoundError(f'{self._COOKIE_FILE.__str__()} does not exist, login to www.adventofcode.com and save your session cookie to this file')
 
@@ -73,6 +95,11 @@ class AOC():
 
         if self._parse_response(r.text):
             print(f'Posted the correct answer for AOC {self.YEAR} day {self.DAY} part {part}')
+            self._answers_obj[f'{self._input_hash}_{part}'] = str(answer)
+            return True
+        else:
+            print(f'Posted the wrong answer for AOC {self.YEAR} day {self.DAY} part {part}, please wait a while and try again.')
+            return False
 
     def _parse_response(self, response: str) -> bool:
         if "That's not the right answer" in response:
