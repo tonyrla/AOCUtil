@@ -24,3 +24,61 @@ To open a web browser with the correct puzzle selected, add anything after the p
 ```bash
 python ./day01.py  asdf
 ```
+
+## Submitting answers
+```python
+    part1 = p.part1()
+    part2 = p.part2()
+
+    p.post_answer(1, part1)
+    p.post_answer(2, part2)
+```
+
+
+
+
+
+
+## Output examples:
+```python
+    print(p.get_input_data()) 
+    # A Y
+    # B Y
+    # B Z
+    # B X
+    # 
+    # C X
+    # C Y
+```
+```python
+    # defaults to str
+    for sub in p.get_input_data_sublist():
+        print(sub)                                  
+        # ['A', 'Y'], ['B', 'Y'], ['B', 'Z'], ['B', 'X'], [], ['C', 'X'], ['C', 'Y']
+    print (next(p.get_input_data_sublist()))        
+    # ['A', 'Y']
+
+    # Type to ord
+    for sub in p.get_input_data_sublist(ord):
+        print(sub)                                  
+        # [65, 89], [66, 89], [66, 90], [66, 88], [], [67, 88], [67, 89]
+    print (next(p.get_input_data_sublist(ord)))     
+    # [65, 89]
+```
+```python
+    print(p.get_input_data_as_grid(ord))            
+    # [[65, 32, 89], [66, 32, 89], [66, 32, 90], [66, 32, 88], [], [67, 32, 88], [67, 32, 89]]
+    print(p.get_input_data_as_grid())               
+    # [['A', ' ', 'Y'], ['B', ' ', 'Y'], ['B', ' ', 'Z'], ['B', ' ', 'X'], [], ['C', ' ', 'X'], ['C', ' ', 'Y']]
+```
+```python
+    print(p.get_input_data_as_splitlist())          
+    # [['A', 'Y'], ['B', 'Y'], ['B', 'Z'], ['B', 'X'], [], ['C', 'X'], ['C', 'Y']]
+    print(p.get_input_data_as_splitlist(ord))       
+    # [[65, 89], [66, 89], [66, 90], [66, 88], [], [67, 88], [67, 89]]
+```
+
+```python
+   print(p.get_input_data_as_int_list())               
+   # [1, 2, 3, 4, 5]
+```

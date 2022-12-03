@@ -32,6 +32,7 @@ class AOC():
         self.CACHE_DIR = Path(filep.parent / 'inputs')
         self._COOKIE_FILE = Path(filep.parent / 'data' / '.secret_session_cookie')
         self._ANSWERS_FILE = Path(filep.parent / 'data' / 'answers.json')
+        self._SPAM_BLOCKER_FILE = Path(filep.parent / 'data' / 'spam_blocker')
 
         if not self._ANSWERS_FILE.exists():
             self._ANSWERS_FILE.write_text('{}')
@@ -80,6 +81,66 @@ class AOC():
             self._set_hash(input_file)
             return input_file.read_text()
 
+    def get_input_data_as_list(self):
+        """ Returns a list of input data, where each element is a row of input data.
+
+        Example input:
+            A Y\nB Y\nB Z\nB X\n\nC X\nC Y\n
+        Returns:
+            ['A Y', 'B Y', 'B Z', 'B X', '', 'C X', 'C Y']
+        """
+
+        return self.get_input_data().splitlines()
+     
+    def get_input_data_as_splitlist(self, t: Any=str):
+        """ Returns a list of lists, where each sublist is a row of input data.
+        
+        Example input:
+            A Y\nB Y\nB Z\nB X\n\nC X\nC Y\n
+            Returns:
+            [['A', 'Y'], ['B', 'Y'], ['B', 'Z'], ['B', 'X'], [], ['C', 'X'], ['C', 'Y']]
+            t=ord returns:
+            [[65, 89], [66, 89], [66, 90], [66, 88], [], [67, 88], [67, 89]]
+        """
+        return [list(map(lambda s: t(s), x.split())) for x in self.get_input_data().splitlines()]
+
+    def get_input_data_as_int_list(self):
+        """ Returns a list of input data, where each element is a row of input data.
+
+        Example input:
+            1\n2\n3\n4\n\n5\n
+        Returns:
+            [1, 2, 3, 4, 5]
+        """
+
+        return [int(x) for x in self.get_input_data_as_list() if x != '']
+    
+    def get_input_data_as_grid(self, t: Any=str):
+        """ Returns a grid, where each sublist is a row of input data.
+
+        Example input:
+            A Y\nB Y\nB Z\nB X\n\nC X\nC Y\n
+        Returns:
+            [['A', ' ', 'Y'], ['B', ' ', 'Y'], ['B', ' ', 'Z'], ['B', ' ', 'X'], [], ['C', ' ', 'X'], ['C', ' ', 'Y']]
+        t=ord returns:
+            [[65, 32, 89], [66, 32, 89], [66, 32, 90], [66, 32, 88], [], [67, 32, 88], [67, 32, 89]]
+        """
+        return [list(map(lambda s: t(s), x)) for x in self.get_input_data_as_list()]
+
+    def get_input_data_sublist(self,t: Any=str):
+        """Returns a list of lists, where each sublist is a block of input data separated by blank lines.
+
+        Example input:
+            A Y\nB Y\nB Z\nB X\n\nC X\nC Y\n
+        Returns:
+            [['A Y', 'B Y', 'B Z', 'B X'], ['C X', 'C Y']]
+        t=ord returns:
+            [[65, 89], [66, 89], [66, 90], [66, 88], [], [67, 88], [67, 89]]
+        """
+        for lst in [list(map(lambda s: t(s), x.split())) for x in self.get_input_data().splitlines()]:
+            yield lst
+
+
     def _set_hash(self, input_file: Path) -> str:
         self._input_hash = hashlib.md5(input_file.read_bytes()).hexdigest()
 
@@ -99,6 +160,11 @@ class AOC():
             result = t(answer) == result
             self.log.warning('Answer already posted, checking against cache :' + (' Correct!' if result else ' Incorrect!'))
             return result
+        # else:
+            # TODO: 
+            # if self._SPAM_BLOCKER_FILE.exists():
+            # open, check if time is up and delete, if not, return False
+
 
         if not self._COOKIE_FILE.exists():
             raise FileNotFoundError(f'{self._COOKIE_FILE.__str__()} does not exist, login to www.adventofcode.com and save your session cookie to this file')
@@ -118,8 +184,12 @@ class AOC():
         if "That's not the right answer" in response:
             return False
         elif "You gave an answer too recently" in response:
-            matches = re.compile(r'([\w ]+) left to wait').findall(response)
+            matches = re.compile(r'([\d]+s) left to wait').findall(response)
             if matches:
+                # TODO: Create a file to check against to prevent spamming.
+                blocking = matches[0]
+                _ = int(blocking[:-1])
+                
                 raise SystemExit(f'You gave an answer too recently, try again in {matches[0]}')
             else:
                 raise SystemExit('You gave an answer too recently, try again later')
